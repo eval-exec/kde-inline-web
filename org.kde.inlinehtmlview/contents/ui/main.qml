@@ -1,8 +1,8 @@
 /*
  *  Inline HTML Panel View — Plasma 6 Plasmoid
  *
- *  WebEngineView inline in the panel (always visible).
- *  TapHandler catches left‑click → opens full popup.
+ *  Compact: inline WebEngineView (panel, interactive).
+ *  Click 🌐 → Plasma full popup.
  *  Right‑click 🌐 → containment menu.
  */
 
@@ -17,7 +17,7 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
 
-    // ── In panel: show inline, but popup on click ───────────────────
+    // ── In panel: compact inline, full popup on click ───────────────
     readonly property bool inPanel: [PlasmaCore.Types.TopEdge, PlasmaCore.Types.RightEdge,
                                       PlasmaCore.Types.BottomEdge, PlasmaCore.Types.LeftEdge]
                                       .includes(Plasmoid.location)
@@ -36,21 +36,20 @@ PlasmoidItem {
     ]
     property var doRefresh: null
 
-    // ── Location ─────────────────────────────────────────────────────
-    readonly property int locTopEdge:    1
-    readonly property int locBottomEdge: 2
-    readonly property bool onHorizontalPanel: Plasmoid.location === locTopEdge  ||
-                                              Plasmoid.location === locBottomEdge
-
-    // ── Shared URL (synced between compact and popup) ──────────────
+    // ── Shared URL ──────────────────────────────────────────────────
     property url currentUrl: Plasmoid.configuration.targetUrl
 
-    // Sync: when popup closes, copy its URL back to the inline view
     onExpandedChanged: {
         if (!expanded && popupWebView.url.toString() !== currentUrl.toString()) {
             currentUrl = popupWebView.url
         }
     }
+
+    // ── Location ─────────────────────────────────────────────────────
+    readonly property int locTopEdge:    1
+    readonly property int locBottomEdge: 2
+    readonly property bool onHorizontalPanel: Plasmoid.location === locTopEdge  ||
+                                              Plasmoid.location === locBottomEdge
 
     // ── Config ──────────────────────────────────────────────────────
     readonly property int effWidth: Plasmoid.configuration.targetWidth > 0
@@ -62,7 +61,7 @@ PlasmoidItem {
     Layout.preferredWidth: effWidth
 
     // ╔══════════════════════════════════════════════════════════════════╗
-    // ║       COMPACT — inline WebEngineView + TapHandler              ║
+    // ║       COMPACT — inline WebEngineView (interactive)             ║
     // ╚══════════════════════════════════════════════════════════════════╝
     compactRepresentation: Item {
         id: compactRoot
@@ -92,9 +91,14 @@ PlasmoidItem {
             settings.errorPageEnabled:               false
             settings.showScrollBars:                 false
 
+            focus: true
+            activeFocusOnTab: true
         }
 
-        // Favicon (click to toggle popup)
+        // Forward keyboard to WebEngineView
+        Keys.forwardTo: [compactWebView]
+
+        // Favicon (click → toggle popup)
         Rectangle {
             id: favicon
             anchors { left: parent.left; top: parent.top; margins: 1 }
@@ -132,7 +136,7 @@ PlasmoidItem {
     }
 
     // ╔══════════════════════════════════════════════════════════════════╗
-    // ║       FULL — interactive WebEngineView popup                   ║
+    // ║       FULL — popup WebEngineView                               ║
     // ╚══════════════════════════════════════════════════════════════════╝
     fullRepresentation: Item {
         id: fullRoot
