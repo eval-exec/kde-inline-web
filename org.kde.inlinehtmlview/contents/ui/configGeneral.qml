@@ -13,8 +13,9 @@ import org.kde.kirigami as Kirigami
 Item {
     id: configPage
 
-    property alias cfg_targetUrl:   urlField.text
-    property alias cfg_targetWidth: widthSpin.value
+    property alias cfg_targetUrl:       urlField.text
+    property alias cfg_targetWidth:     widthSpin.value
+    property alias cfg_refreshInterval: refreshSpin.value
 
     Kirigami.FormLayout {
         anchors.fill: parent
@@ -36,6 +37,17 @@ Item {
             editable: true
         }
 
+        SpinBox {
+            id: refreshSpin
+            Kirigami.FormData.label: "Auto-refresh (seconds):"
+            from: 0
+            to: 3600
+            stepSize: 5
+            editable: true
+            textFromValue: function(v) { return v === 0 ? "Off" : v + "s" }
+            valueFromText: function(t) { return parseInt(t) || 0 }
+        }
+
         Label {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
@@ -45,8 +57,8 @@ Item {
                   "  • file:///home/user/status.html\n" +
                   "  • http://localhost:8080/dashboard\n" +
                   "  • https://example.com/widget\n\n" +
-                  "The page is rendered with a transparent background " +
-                  "and auto‑scales to fit the widget width."
+                  "Set auto-refresh to 0 to disable.  The page is rendered " +
+                  "with a transparent background and auto‑scales to fit."
         }
     }
 }

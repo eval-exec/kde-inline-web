@@ -21,6 +21,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtWebEngine
 import org.kde.plasma.plasmoid
+import org.kde.plasma.core as PlasmaCore
 
 // ===========================================================================
 //  ROOT — PlasmoidItem (the mandatory Plasma 6 container)
@@ -29,12 +30,20 @@ PlasmoidItem {
     id: root
 
     // ── Representation override ────────────────────────────────────────
-    //  Force the FULL inline representation.  Even on a thin panel this
-    //  widget will never collapse into a popup icon.
-    // ─────────────────────────────────────────────────────────────────────
-    preferredRepresentation: fullRepresentation   // ← critical
-    switchWidth:  -1                              // never auto-switch
-    switchHeight: -1                              // never auto-switch
+    preferredRepresentation: fullRepresentation
+    switchWidth:  -1
+    switchHeight: -1
+
+    // ── Context menu actions (shown by the panel containment) ──────────
+    //  These appear in the panel's built-in right‑click menu, which
+    //  renders outside the panel window (no clipping).
+    Plasmoid.contextualActions: [
+        PlasmaCore.Action {
+            text: "Refresh"
+            icon.name: "view-refresh"
+            onTriggered: webView.reload()
+        }
+    ]
 
     // ── Plasma location constants (PlasmaCore.Types.Location values) ────
     //  TopEdge=1  BottomEdge=2  LeftEdge=3  RightEdge=4  Floating=0
@@ -72,7 +81,13 @@ PlasmoidItem {
 
         WebEngineView {
             id: webView
-            anchors.fill: parent
+            anchors {
+                fill: parent
+                leftMargin: favicon.width + 2
+                rightMargin: 1
+                topMargin: 1
+                bottomMargin: 1
+            }
 
             // ─────────────────────────────────────────────────────────
             //  Target URL — set via  right-click → Configure…  (or
@@ -132,18 +147,78 @@ PlasmoidItem {
             }
         }
 
-        // ── Right‑click catcher ──────────────────────────────────────
-        //  WebEngineView consumes all mouse events, including right‑click,
-        //  which prevents the Plasma context menu from appearing.  This
-        //  transparent MouseArea sits on top and only intercepts right‑
-        //  clicks, forwarding them to the Plasma configure action.
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.RightButton
-            z: 100
-            onClicked: {
-                Plasmoid.internalAction("configure").trigger()
+        // ── Favicon anchor ──────────────────────────────────────────
+        //  Sits outside the WebEngineView so right‑clicks propagate
+        //  to the containment (which shows the proper popup menu
+        //  with Refresh + Configure, unclipped).  Left‑click refreshes.
+        Rectangle {
+            id: favicon
+            anchors { left: parent.left; top: parent.top; margins: 1 }
+            width: 16; height: 16
+            radius: 3
+            color: favMouse.containsMouse
+                ? Qt.rgba(1,1,1,0.2) : Qt.rgba(1,1,1,0.05)
+
+            // Real favicon from the loaded page
+            Image {
+                anchors { fill: parent; margins: 2 }
+                source: webView.icon
+                visible: webView.icon.toString() !== ""
+                asynchronous: true
             }
+            // Fallback globe when no favicon yet
+            Text {
+                anchors.centerIn: parent
+                text: "🌐"
+                font.pixelSize: 10
+                visible: webView.icon.toString() === ""
+            }
+
+            MouseArea {
+                id: favMouse
+                anchors.fill: parent
+                // Only accept left‑click — right‑click propagates to
+                // the containment for the popup menu.
+                acceptedButtons: Qt.LeftButton
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: webView.reload()
+            }
+        }
+
+        // ── Refresh button (visible on hover) ───────────────────────
+        Rectangle {
+            anchors { right: parent.right; bottom: parent.bottom; margins: 2 }
+            width: 16; height: 16
+            radius: 3
+            color: refreshMouse.containsMouse
+                ? Qt.rgba(1,1,1,0.2) : Qt.rgba(1,1,1,0.05)
+            visible: refreshMouse.containsMouse || refreshTimer.running
+
+            Text {
+                anchors.centerIn: parent
+                text: "↻"
+                color: "white"
+                font.pixelSize: 12
+            }
+
+            MouseArea {
+                id: refreshMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: webView.reload()
+            }
+        }
+
+        // ── Auto‑refresh timer ──────────────────────────────────────
+        //  Reloads the page at the configured interval (0 = disabled).
+        Timer {
+            id: refreshTimer
+            interval: Math.max(0, Plasmoid.configuration.refreshInterval) * 1000
+            repeat: true
+            running: Plasmoid.configuration.refreshInterval > 0
+            onTriggered: webView.reload()
         }
     }
 

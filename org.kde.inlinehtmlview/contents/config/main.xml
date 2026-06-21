@@ -23,5 +23,11 @@
             <max>2000</max>
             <label>Widget width (pixels)</label>
         </entry>
+        <entry name="refreshInterval" type="Int">
+            <default>0</default>
+            <min>0</min>
+            <max>3600</max>
+            <label>Auto-refresh interval (seconds, 0=off)</label>
+        </entry>
     </group>
 </kcfg>
