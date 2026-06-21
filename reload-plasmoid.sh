@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  reload-plasmoid — Rebuild & reload the Inline HTML Panel View plasmoid
+#  reload-plasmoid.sh — Rebuild & reload the Inline HTML Panel View plasmoid
 #
 #  Sequence:
 #    1. Remove widget from panel  (DBus scripting)
@@ -11,10 +11,10 @@
 #    6. Add widget to panel       (DBus scripting)
 #
 #  Usage:
-#    ./reload-plasmoid              # full reload (default)
-#    ./reload-plasmoid --preview    # launch plasmawindowed (always fresh)
-#    ./reload-plasmoid --install    # first-time install + add to panel
-#    ./reload-plasmoid --uninstall  # remove widget + uninstall
+#    ./reload-plasmoid.sh              # full reload (default)
+#    ./reload-plasmoid.sh --preview    # launch plasmawindowed (always fresh)
+#    ./reload-plasmoid.sh --install    # first-time install + add to panel
+#    ./reload-plasmoid.sh --uninstall  # remove widget + uninstall
 # =============================================================================
 
 set -euo pipefail
@@ -164,7 +164,7 @@ cmd_reload() {
     echo ""
     echo "──────────────────────────────────────────────────────────────────"
     echo "  Widget reloaded with full clean slate."
-    echo "  Test standalone:  ./reload-plasmoid --preview"
+    echo "  Test standalone:  ./reload-plasmoid.sh --preview"
     echo "──────────────────────────────────────────────────────────────────"
 }
 
