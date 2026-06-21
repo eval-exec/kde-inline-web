@@ -84,7 +84,7 @@ PlasmoidItem {
             }
             url: root.currentUrl
             backgroundColor: "transparent"
-            zoomFactor: Math.max(0.15, Math.min(1.0, compactRoot.width / 1024))
+            zoomFactor: 1.0
 
             settings.localContentCanAccessRemoteUrls: true
             settings.javascriptEnabled:              true
