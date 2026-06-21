@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    KConfig XT schema for the Inline HTML Panel View plasmoid.
+    Exposes a single "General" group with the targetUrl entry so the
+    user can change the URL via  right-click → Configure…  instead of
+    editing the QML source.
+-->
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+
+    <kcfgfile name=""/>
+
+    <group name="General">
+        <entry name="targetUrl" type="String">
+            <default>https://reddit.com</default>
+            <label>Target URL</label>
+        </entry>
+        <entry name="targetWidth" type="Int">
+            <default>400</default>
+            <min>100</min>
+            <max>2000</max>
+            <label>Widget width (pixels)</label>
+        </entry>
+    </group>
+</kcfg>

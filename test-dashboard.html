@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: transparent;
+    color: #e0e0e0;
+    font-family: system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 12px 24px;
+    text-align: center;
+  }
+  .label { font-size: 11px; opacity: 0.6; letter-spacing: 0.5px; text-transform: uppercase; }
+  .value { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .value.ok { color: #4caf50; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="label">Inline HTML View</div>
+    <div class="value ok">✓ Live</div>
+  </div>
+</body>
+</html>

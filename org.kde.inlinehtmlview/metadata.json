@@ -1,0 +1,20 @@
+{
+    "KPlugin": {
+        "Id": "org.kde.inlinehtmlview",
+        "Name": "Inline HTML Panel View",
+        "Description": "Embeds a live, scrollable HTML page directly inline within a Plasma panel without collapsing into a popup icon.",
+        "Category": "Utilities",
+        "EnabledByDefault": true,
+        "Icon": "text-html",
+        "License": "GPL-3.0",
+        "Version": "1.0",
+        "Website": "https://github.com/eval-exec/kde-inline-web"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "X-KDE-ServiceTypes": ["Plasma/Applet"],
+    "X-KDE-PluginInfo-Name": "org.kde.inlinehtmlview",
+    "X-KDE-PluginInfo-Category": "Utilities",
+    "X-KDE-PluginInfo-License": "GPL-3.0"
+}

@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  reload-plasmoid — Rebuild & reload the Inline HTML Panel View plasmoid
+#
+#  Sequence:
+#    1. Remove widget from panel  (DBus scripting)
+#    2. Uninstall package         (kpackagetool6 -r)
+#    3. Restart plasmashell       (plasmashell --replace)
+#    4. Wait for shell ready      (poll DBus)
+#    5. Install package           (kpackagetool6 -i)
+#    6. Add widget to panel       (DBus scripting)
+#
+#  Usage:
+#    ./reload-plasmoid              # full reload (default)
+#    ./reload-plasmoid --preview    # launch plasmawindowed (always fresh)
+#    ./reload-plasmoid --install    # first-time install + add to panel
+#    ./reload-plasmoid --uninstall  # remove widget + uninstall
+# =============================================================================
+
+set -euo pipefail
+
+PLASMOID_ID="org.kde.inlinehtmlview"
+PLASMOID_SRC="$(cd "$(dirname "$0")" && pwd)/${PLASMOID_ID}"
+INSTALL_DIR="${HOME}/.local/share/plasma/plasmoids/${PLASMOID_ID}"
+
+CACHES=(
+    "${HOME}/.cache/plasmashell/qmlcache"
+    "${HOME}/.cache/plasma_widget_org.kde.inlinehtmlview/qmlcache"
+    "${HOME}/.cache/plasmashell/compiled_qml"
+)
+
+# ── helpers ────────────────────────────────────────────────────────────────
+die()  { echo "ERROR: $*" >&2; exit 1; }
+info() { echo " → $*"; }
+ok()   { echo " ✓ $*"; }
+warn() { echo " ⚠ $*"; }
+
+check_deps() {
+    command -v kpackagetool6 >/dev/null 2>&1 || die "kpackagetool6 not found"
+    command -v qdbus          >/dev/null 2>&1 || die "qdbus not found"
+}
+is_nixos() { [ -f /etc/NIXOS ] 2>/dev/null; }
+is_installed() {
+    kpackagetool6 -t Plasma/Applet -l 2>/dev/null | grep -q "^${PLASMOID_ID}$"
+}
+
+# ── DBus scripting helpers ──────────────────────────────────────────────────
+dbus_eval() {
+    qdbus org.kde.plasmashell /PlasmaShell \
+        org.kde.PlasmaShell.evaluateScript "$1" 2>&1
+}
+
+remove_widget_from_panel() {
+    info "Removing widget from panel …"
+    dbus_eval '
+var plugin = "'"${PLASMOID_ID}"'";
+var allPanels = panels();
+var count = 0;
+for (var i = 0; i < allPanels.length; i++) {
+    var wids = allPanels[i].widgets(plugin);
+    for (var j = 0; j < wids.length; j++) { wids[j].remove(); count++; }
+}
+print("Removed " + count + " instance(s)");
+' | while IFS= read -r line; do echo "     $line"; done
+    ok "Widget removed from panel"
+}
+
+add_widget_to_panel() {
+    info "Adding widget to panel …"
+    dbus_eval '
+var plugin = "'"${PLASMOID_ID}"'";
+var allPanels = panels();
+if (allPanels.length === 0) { print("No panels found"); }
+for (var i = 0; i < allPanels.length; i++) {
+    var w = allPanels[i].addWidget(plugin);
+    print("Added to panel " + allPanels[i].id + " (widget id=" + w.id + ")");
+}
+' | while IFS= read -r line; do echo "     $line"; done
+    ok "Widget added to panel"
+}
+
+restart_plasmashell() {
+    info "Restarting plasmashell …"
+    nohup plasmashell --replace &>/dev/null &
+    disown
+    ok "plasmashell --replace launched"
+}
+
+wait_for_plasmashell() {
+    info "Waiting for plasmashell to be ready …"
+    local waited=0
+    while ! qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.shell 2>/dev/null | grep -q .; do
+        sleep 0.5
+        waited=$((waited + 1))
+        if [ "$waited" -ge 20 ]; then
+            die "plasmashell did not start within 10 seconds"
+        fi
+    done
+    ok "plasmashell is ready"
+}
+
+# ── cache ───────────────────────────────────────────────────────────────────
+clear_caches() {
+    local cleared=0
+    for d in "${CACHES[@]}"; do
+        if [ -d "$d" ]; then
+            local count
+            count=$(find "$d" -type f 2>/dev/null | wc -l)
+            if [ "$count" -gt 0 ]; then
+                rm -rf "${d:?}"/*
+                info "Cleared ${count} cached file(s) from ${d/$HOME/~}"
+                cleared=1
+            fi
+        fi
+    done
+    if [ "$cleared" -eq 0 ]; then
+        info "No QML cache files found (already clean)"
+    fi
+}
+
+# ── commands ────────────────────────────────────────────────────────────────
+cmd_reload() {
+    check_deps
+    [ -d "$PLASMOID_SRC" ] || die "source not found at $PLASMOID_SRC"
+
+    echo "══════════════════════════════════════════════════════════════════"
+    echo "  Reloading: ${PLASMOID_ID}"
+    echo "══════════════════════════════════════════════════════════════════"
+    echo ""
+
+    # 1 — remove widget from panel (before uninstalling)
+    remove_widget_from_panel
+
+    # 2 — uninstall
+    echo ""
+    kpackagetool6 -t Plasma/Applet -r "$PLASMOID_ID" 2>/dev/null || true
+    rm -rf "$INSTALL_DIR"
+    ok "Uninstalled ${PLASMOID_ID}"
+
+    # 3 — restart plasmashell (destroy in-memory QML components)
+    restart_plasmashell
+
+    # 4 — wait for new plasmashell to be ready
+    wait_for_plasmashell
+
+    # 5 — clear all QML bytecode caches (after shell restart)
+    clear_caches
+
+    # 6 — install fresh from source
+    echo ""
+    kpackagetool6 -t Plasma/Applet -i "$PLASMOID_SRC"
+    ok "Installed ${PLASMOID_ID}"
+
+    # 7 — verify
+    if grep -q "toolTip" "${INSTALL_DIR}/contents/ui/main.qml" 2>/dev/null; then
+        die "Installed main.qml contains stale 'toolTip' reference"
+    fi
+    ok "main.qml is clean"
+
+    # 8 — add widget back to panel
+    echo ""
+    add_widget_to_panel
+
+    echo ""
+    echo "──────────────────────────────────────────────────────────────────"
+    echo "  Widget reloaded with full clean slate."
+    echo "  Test standalone:  ./reload-plasmoid --preview"
+    echo "──────────────────────────────────────────────────────────────────"
+}
+
+cmd_install() {
+    check_deps
+    [ -d "$PLASMOID_SRC" ] || die "source not found at $PLASMOID_SRC"
+    kpackagetool6 -t Plasma/Applet -i "$PLASMOID_SRC"
+    ok "Installed to ${INSTALL_DIR}"
+    add_widget_to_panel
+}
+
+cmd_uninstall() {
+    check_deps
+    remove_widget_from_panel
+    kpackagetool6 -t Plasma/Applet -r "$PLASMOID_ID" 2>/dev/null || true
+    rm -rf "$INSTALL_DIR" "${HOME}/.cache/plasma_widget_${PLASMOID_ID}"
+    ok "Uninstalled ${PLASMOID_ID}"
+}
+
+cmd_preview() {
+    info "Launching plasmawindowed (fresh QML engine, no cache) …"
+    if is_nixos; then
+        exec nix shell nixpkgs#kdePackages.qtwebengine -c plasmawindowed "$PLASMOID_ID"
+    else
+        command -v plasmawindowed >/dev/null 2>&1 || die "plasmawindowed not found"
+        exec plasmawindowed "$PLASMOID_ID"
+    fi
+}
+
+# ── main ───────────────────────────────────────────────────────────────────
+case "${1:-}" in
+    --install)   cmd_install ;;
+    --uninstall) cmd_uninstall ;;
+    --preview)   cmd_preview ;;
+    --help|-h)
+        echo "Usage: $0 [--install | --uninstall | --preview]"
+        echo ""
+        echo "  (no flag)   Full reload: remove widget → uninstall → replace shell → install → add widget"
+        echo "  --install   First-time install + add to panel"
+        echo "  --uninstall Remove widget + uninstall"
+        echo "  --preview   Launch plasmawindowed (fresh engine, no cache)"
+        exit 0
+        ;;
+    "") cmd_reload ;;
+    *) die "Unknown flag: $1  — use --help" ;;
+esac

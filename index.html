@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel Status</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: transparent;
+    color: #e0e0e0;
+    font-family: system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    height: 100vh;
+    padding: 0 12px;
+    overflow: hidden;
+  }
+  .row { display:flex; align-items:center; gap:8px; width:100%; }
+  .spacer { flex:1; }
+  .card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    padding: 4px 10px;
+    white-space: nowrap;
+  }
+  .label { font-size:9px; opacity:0.5; text-transform:uppercase; letter-spacing:0.3px; }
+  .value { font-size:13px; font-weight:600; }
+  .green  { color:#4caf50; }
+  .yellow { color:#ff9800; }
+  .red    { color:#f44336; }
+  .cyan   { color:#00bcd4; }
+  .time   { font-size:15px; font-weight:700; }
+  .dot {
+    display:inline-block;
+    width:6px; height:6px;
+    border-radius:50%;
+    margin-right:3px;
+  }
+  .dot.green  { background:#4caf50; }
+  .dot.yellow { background:#ff9800; }
+  .dot.red    { background:#f44336; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <!-- status -->
+    <div class="card">
+      <span class="dot green"></span>
+      <span class="value green" style="font-size:12px">Online</span>
+    </div>
+    <!-- CPU -->
+    <div class="card">
+      <div class="label">CPU</div>
+      <div class="value cyan">23%</div>
+    </div>
+    <!-- RAM -->
+    <div class="card">
+      <div class="label">RAM</div>
+      <div class="value cyan">8.2G</div>
+    </div>
+    <!-- temp -->
+    <div class="card">
+      <div class="label">TEMP</div>
+      <div class="value yellow">54°C</div>
+    </div>
+    <span class="spacer"></span>
+    <!-- clock -->
+    <div class="card">
+      <div class="time" id="clock">--:--</div>
+    </div>
+  </div>
+  <script>
+    function tick() {
+      var d = new Date();
+      var h = d.getHours().toString().padStart(2,'0');
+      var m = d.getMinutes().toString().padStart(2,'0');
+      document.getElementById('clock').textContent = h + ':' + m;
+    }
+    tick();
+    setInterval(tick, 10000);
+  </script>
+</body>
+</html>
