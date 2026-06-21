@@ -42,6 +42,16 @@ PlasmoidItem {
     readonly property bool onHorizontalPanel: Plasmoid.location === locTopEdge  ||
                                               Plasmoid.location === locBottomEdge
 
+    // ── Shared URL (synced between compact and popup) ──────────────
+    property url currentUrl: Plasmoid.configuration.targetUrl
+
+    // Sync: when popup closes, copy its URL back to the inline view
+    onExpandedChanged: {
+        if (!expanded && popupWebView.url.toString() !== currentUrl.toString()) {
+            currentUrl = popupWebView.url
+        }
+    }
+
     // ── Config ──────────────────────────────────────────────────────
     readonly property int effWidth: Plasmoid.configuration.targetWidth > 0
         ? Plasmoid.configuration.targetWidth : 400
@@ -73,7 +83,7 @@ PlasmoidItem {
                 leftMargin:  favicon.width + 2
                 rightMargin: 1; topMargin: 1; bottomMargin: 1
             }
-            url: Plasmoid.configuration.targetUrl
+            url: root.currentUrl
             backgroundColor: "transparent"
             zoomFactor: Math.max(0.15, Math.min(1.0, compactRoot.width / 1024))
 
@@ -81,17 +91,10 @@ PlasmoidItem {
             settings.javascriptEnabled:              true
             settings.errorPageEnabled:               false
             settings.showScrollBars:                 false
+
         }
 
-        // TapHandler — Qt 6 pointer handler, may work where MouseArea doesn't
-        TapHandler {
-            property bool wasExpanded: false
-            acceptedButtons: Qt.LeftButton
-            onPressedChanged: if (pressed) { wasExpanded = root.expanded }
-            onTapped: root.expanded = !wasExpanded
-        }
-
-        // Favicon
+        // Favicon (click to toggle popup)
         Rectangle {
             id: favicon
             anchors { left: parent.left; top: parent.top; margins: 1 }
@@ -115,7 +118,7 @@ PlasmoidItem {
                 acceptedButtons: Qt.LeftButton
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: compactWebView.reload()
+                onClicked: root.expanded = !root.expanded
             }
         }
 
@@ -142,7 +145,7 @@ PlasmoidItem {
         WebEngineView {
             id: popupWebView
             anchors { fill: parent; margins: 2 }
-            url: Plasmoid.configuration.targetUrl
+            url: root.currentUrl
             backgroundColor: "white"
             settings {
                 localContentCanAccessRemoteUrls: true
